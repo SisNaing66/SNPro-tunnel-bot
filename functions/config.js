@@ -5,3 +5,7 @@
 
 export const TELEGRAM_BOT_TOKEN_ENV = 'BOT_TOKEN';
 export const D1_BINDING_NAME = 'DB';
+export const ADMIN_IDS = [
+    123456789,
+    987654321
+];

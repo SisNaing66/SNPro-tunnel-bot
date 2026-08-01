@@ -5,6 +5,7 @@
 
 import { TELEGRAM_BOT_TOKEN_ENV, D1_BINDING_NAME, ADMIN_IDS } from './config.js';
 
+// Random Serial Key Auto-Generate ပြုလုပ်ပေးမည့် Helper (Format: WARP-XXXX-XXXX-XXXX)
 function generateRandomKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "WARP";
@@ -17,15 +18,35 @@ function generateRandomKey() {
     return result;
 }
 
+// Telegram Message အသစ် ပို့ပေးမည့် Helper ( Message ID ပြန်ရယူမည် )
 async function sendTelegramMsg(token, chatId, text) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    await fetch(url, {
+    const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" })
     });
+    return await res.json();
 }
 
+// Telegram Message ကို ပြန်လည် Edit / Update လုပ်ပေးမည့် Helper
+async function editTelegramMsg(token, chatId, messageId, text) {
+    const url = `https://api.telegram.org/bot${token}/editMessageText`;
+    await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            text: text,
+            parse_mode: "Markdown"
+        })
+    });
+}
+
+/**
+ * Telegram Updates ကို လက်ခံ၍ Commands များကို ကိုင်တွယ်ခြင်း
+ */
 export async function handleUpdate(update, env, request) {
     const token = env[TELEGRAM_BOT_TOKEN_ENV];
     const db = env[D1_BINDING_NAME];
@@ -37,74 +58,152 @@ export async function handleUpdate(update, env, request) {
     const text = message.text.trim();
     const parts = text.split(/\s+/);
     const command = parts[0];
-    
+
+    // 💡 1. /start Command (Welcome Message)
+    if (command === "/start") {
+        const welcomeText = `👋 *Welcome to WARP Tunnel License Bot!*\n\n` +
+            `This bot manages hardware-bound license keys for WARP Tunnel Android App.\n\n` +
+            `⚡ *Available Admin Commands:*\n` +
+            `• \`/genkey <HWID> <Days>d\` - Generate & bind new key\n` +
+            `• \`/upkey <HWID> <Days>d\` - Extend existing license\n` +
+            `• \`/delkey <HWID>\` - Delete license key\n\n` +
+            `📢 *Channel:* [WARP Tunnel Updates](https://t.me/premium_channel_404)\n` +
+            `👤 *Your Telegram ID:* \`${chatId}\``;
+
+        return await sendTelegramMsg(token, chatId, welcomeText);
+    }
+
+    // 💡 2. ADMIN CHECK: Admin မဟုတ်ပါက တားဆီးခြင်း
     if (command.startsWith("/")) {
         if (!ADMIN_IDS.includes(chatId)) {
-            return await sendTelegramMsg(token, chatId, "🚫 *Access Denied!* You are not authorized to use this bot commands.");
+            return await sendTelegramMsg(token, chatId, "🚫 *Access Denied!* You are not authorized to use this bot.");
         }
     }
-    
+
+    // 💡 3. /genkey <HWID> <Days>
     if (command === "/genkey") {
         if (parts.length < 3) {
-            return await sendTelegramMsg(token, chatId, "❌ Usage: `/genkey <HWID> <Days>d`\nExample: `/genkey 1234567890abcdef 30d`");
-        }
-        const hwid = parts[1];
-        const daysStr = parts[2].replace("d", "");
-        const days = parseInt(daysStr);
-
-        if (isNaN(days) || days <= 0) {
-            return await sendTelegramMsg(token, chatId, "❌ Invalid number of days!");
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/genkey <HWID> <Days>d\`\n*Example:* \`/genkey 3c94e111df90d2cb 30d\``);
         }
 
-        const serialKey = generateRandomKey();
-        const expireTimestamp = Date.now() + days * 24 * 60 * 60 * 1000;
+        // ⏳ Loading Message ပို့ခြင်း
+        const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Generating Serial Key & Binding Database... Please wait.*");
+        const msgId = loadingRes.result?.message_id;
 
-        await db.prepare(
-            "INSERT OR REPLACE INTO licenses (hwid, serial_key, expire_date, is_active) VALUES (?, ?, ?, 1)"
-        ).bind(hwid, serialKey, expireTimestamp).run();
+        try {
+            const hwid = parts[1];
+            const daysStr = parts[2].replace("d", "");
+            const days = parseInt(daysStr);
 
-        const expireDateStr = new Date(expireTimestamp).toISOString().split('T')[0];
-        const reply = `✅ *New Key Generated & Bound!*\n\n📱 *HWID:* \`${hwid}\`\n🔑 *Serial Key:* \`${serialKey}\`\n📅 *Expire Date:* \`${expireDateStr}\` (${days} days)`;
-        return await sendTelegramMsg(token, chatId, reply);
+            if (isNaN(days) || days <= 0) {
+                const errText = "❌ *Error:* Invalid number of days!";
+                if (msgId) return await editTelegramMsg(token, chatId, msgId, errText);
+                return await sendTelegramMsg(token, chatId, errText);
+            }
+
+            const serialKey = generateRandomKey();
+            const expireTimestamp = Date.now() + days * 24 * 60 * 60 * 1000;
+
+            await db.prepare(
+                "INSERT OR REPLACE INTO licenses (hwid, serial_key, expire_date, is_active) VALUES (?, ?, ?, 1)"
+            ).bind(hwid, serialKey, expireTimestamp).run();
+
+            const expireDateStr = new Date(expireTimestamp).toISOString().split('T')[0];
+            const successReply = `✅ *License Key Successfully Generated!*\n\n` +
+                `📱 *HWID:* \`${hwid}\`\n` +
+                `🔑 *Serial Key:* \`${serialKey}\`\n` +
+                `📅 *Expire Date:* \`${expireDateStr}\` (${days} days)\n` +
+                `STATUS: \`ACTIVE\``;
+
+            // Loading Message ကို Result ဖြင့် အစားထိုးခြင်း
+            if (msgId) {
+                await editTelegramMsg(token, chatId, msgId, successReply);
+            } else {
+                await sendTelegramMsg(token, chatId, successReply);
+            }
+        } catch (e) {
+            const failText = `❌ *Database Error:* ${e.message}`;
+            if (msgId) await editTelegramMsg(token, chatId, msgId, failText);
+            else await sendTelegramMsg(token, chatId, failText);
+        }
+        return;
     }
-    
+
+    // 💡 4. /delkey <HWID>
     if (command === "/delkey") {
         if (parts.length < 2) {
-            return await sendTelegramMsg(token, chatId, "❌ Usage: `/delkey <HWID>`");
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/delkey <HWID>\`");
         }
-        const hwid = parts[1];
 
-        await db.prepare("DELETE FROM licenses WHERE hwid = ?").bind(hwid).run();
-        return await sendTelegramMsg(token, chatId, `🗑️ License for HWID \`${hwid}\` deleted successfully!`);
+        const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Deleting license from database...*");
+        const msgId = loadingRes.result?.message_id;
+
+        try {
+            const hwid = parts[1];
+            await db.prepare("DELETE FROM licenses WHERE hwid = ?").bind(hwid).run();
+
+            const reply = `🗑️ *License Deleted!*\n\nHWID \`${hwid}\` has been removed from database.`;
+            if (msgId) await editTelegramMsg(token, chatId, msgId, reply);
+            else await sendTelegramMsg(token, chatId, reply);
+        } catch (e) {
+            const failText = `❌ *Error:* ${e.message}`;
+            if (msgId) await editTelegramMsg(token, chatId, msgId, failText);
+            else await sendTelegramMsg(token, chatId, failText);
+        }
+        return;
     }
-    
+
+    // 💡 5. /upkey <HWID> <ExtraDays>
     if (command === "/upkey") {
         if (parts.length < 3) {
-            return await sendTelegramMsg(token, chatId, "❌ Usage: `/upkey <HWID> <ExtraDays>d`");
-        }
-        const hwid = parts[1];
-        const daysStr = parts[2].replace("d", "");
-        const extraDays = parseInt(daysStr);
-
-        if (isNaN(extraDays) || extraDays <= 0) {
-            return await sendTelegramMsg(token, chatId, "❌ Invalid number of days!");
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/upkey <HWID> <ExtraDays>d\`");
         }
 
-        const row = await db.prepare("SELECT expire_date FROM licenses WHERE hwid = ?").bind(hwid).first();
-        if (!row) {
-            return await sendTelegramMsg(token, chatId, "❌ No existing license found for this HWID!");
+        const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Updating expiration date...*");
+        const msgId = loadingRes.result?.message_id;
+
+        try {
+            const hwid = parts[1];
+            const daysStr = parts[2].replace("d", "");
+            const extraDays = parseInt(daysStr);
+
+            if (isNaN(extraDays) || extraDays <= 0) {
+                const errText = "❌ *Error:* Invalid number of days!";
+                if (msgId) return await editTelegramMsg(token, chatId, msgId, errText);
+                return await sendTelegramMsg(token, chatId, errText);
+            }
+
+            const row = await db.prepare("SELECT expire_date FROM licenses WHERE hwid = ?").bind(hwid).first();
+            if (!row) {
+                const notFoundText = `❌ *Error:* No existing license found for HWID \`${hwid}\`!`;
+                if (msgId) return await editTelegramMsg(token, chatId, msgId, notFoundText);
+                return await sendTelegramMsg(token, chatId, notFoundText);
+            }
+
+            const currentExpire = Math.max(Date.now(), row.expire_date);
+            const newExpire = currentExpire + extraDays * 24 * 60 * 60 * 1000;
+
+            await db.prepare("UPDATE licenses SET expire_date = ? WHERE hwid = ?").bind(newExpire, hwid).run();
+
+            const newExpireStr = new Date(newExpire).toISOString().split('T')[0];
+            const reply = `🚀 *License Extended!*\n\n` +
+                `📱 *HWID:* \`${hwid}\`\n` +
+                `📅 *New Expire Date:* \`${newExpireStr}\` (+${extraDays} days)`;
+
+            if (msgId) await editTelegramMsg(token, chatId, msgId, reply);
+            else await sendTelegramMsg(token, chatId, reply);
+        } catch (e) {
+            const failText = `❌ *Error:* ${e.message}`;
+            if (msgId) await editTelegramMsg(token, chatId, msgId, failText);
+            else await sendTelegramMsg(token, chatId, failText);
         }
-
-        const currentExpire = Math.max(Date.now(), row.expire_date);
-        const newExpire = currentExpire + extraDays * 24 * 60 * 60 * 1000;
-
-        await db.prepare("UPDATE licenses SET expire_date = ? WHERE hwid = ?").bind(newExpire, hwid).run();
-
-        const newExpireStr = new Date(newExpire).toISOString().split('T')[0];
-        return await sendTelegramMsg(token, chatId, `🚀 *License Extended!*\n\n📱 *HWID:* \`${hwid}\`\n📅 *New Expire Date:* \`${newExpireStr}\``);
+        return;
     }
 }
 
+/**
+ * Android App မှ /api/check-license ဖြင့် လာရောက်စစ်ဆေးသည့် Request
+ */
 export async function handleLicenseCheck(request, env) {
     const db = env[D1_BINDING_NAME];
     try {

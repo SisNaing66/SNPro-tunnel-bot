@@ -18,7 +18,7 @@ function generateRandomKey() {
     return result;
 }
 
-// Telegram Message အသစ် ပို့ပေးမည့် Helper ( Message ID ပြန်ရယူမည် )
+// Telegram Message အသစ် ပို့ပေးမည့် Helper
 async function sendTelegramMsg(token, chatId, text) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const res = await fetch(url, {
@@ -61,13 +61,13 @@ export async function handleUpdate(update, env, request) {
 
     // 💡 1. /start Command (Welcome Message)
     if (command === "/start") {
-        const welcomeText = `👋 *Welcome to WARP Tunnel License Bot!*\n\n` +
-            `This bot manages hardware-bound license keys for WARP Tunnel Android App.\n\n` +
-            `⚡ *Available Admin Commands:*\n` +
-            `• \`/genkey <HWID> <Days>d\` - Generate & bind new key\n` +
-            `• \`/upkey <HWID> <Days>d\` - Extend existing license\n` +
-            `• \`/delkey <HWID>\` - Delete license key\n\n` +
-            `📢 *Channel:* [WARP Tunnel Updates](https://t.me/premium_channel_404)\n` +
+        const welcomeText = "👋 *Welcome to WARP Tunnel License Bot!*\n\n" +
+            "This bot manages hardware-bound license keys for WARP Tunnel Android App.\n\n" +
+            "⚡ *Available Admin Commands:*\n" +
+            "• `/genkey <HWID> <Days>d` - Generate & bind new key\n" +
+            "• `/upkey <HWID> <Days>d` - Extend existing license\n" +
+            "• `/delkey <HWID>` - Delete license key\n\n" +
+            "📢 *Channel:* [WARP Tunnel Updates](https://t.me/premium_channel_404)\n" +
             `👤 *Your Telegram ID:* \`${chatId}\``;
 
         return await sendTelegramMsg(token, chatId, welcomeText);
@@ -83,7 +83,7 @@ export async function handleUpdate(update, env, request) {
     // 💡 3. /genkey <HWID> <Days>
     if (command === "/genkey") {
         if (parts.length < 3) {
-            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/genkey <HWID> <Days>d\`\n*Example:* \`/genkey 3c94e111df90d2cb 30d\``);
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/genkey <HWID> <Days>d`\n*Example:* `/genkey 3c94e111df90d2cb 30d`");
         }
 
         // ⏳ Loading Message ပို့ခြင်း
@@ -109,13 +109,12 @@ export async function handleUpdate(update, env, request) {
             ).bind(hwid, serialKey, expireTimestamp).run();
 
             const expireDateStr = new Date(expireTimestamp).toISOString().split('T')[0];
-            const successReply = `✅ *License Key Successfully Generated!*\n\n` +
+            const successReply = "✅ *License Key Successfully Generated!*\n\n" +
                 `📱 *HWID:* \`${hwid}\`\n` +
                 `🔑 *Serial Key:* \`${serialKey}\`\n` +
                 `📅 *Expire Date:* \`${expireDateStr}\` (${days} days)\n` +
-                `STATUS: \`ACTIVE\``;
+                "STATUS: `ACTIVE`";
 
-            // Loading Message ကို Result ဖြင့် အစားထိုးခြင်း
             if (msgId) {
                 await editTelegramMsg(token, chatId, msgId, successReply);
             } else {
@@ -132,7 +131,7 @@ export async function handleUpdate(update, env, request) {
     // 💡 4. /delkey <HWID>
     if (command === "/delkey") {
         if (parts.length < 2) {
-            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/delkey <HWID>\`");
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/delkey <HWID>`");
         }
 
         const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Deleting license from database...*");
@@ -156,7 +155,7 @@ export async function handleUpdate(update, env, request) {
     // 💡 5. /upkey <HWID> <ExtraDays>
     if (command === "/upkey") {
         if (parts.length < 3) {
-            return await sendTelegramMsg(token, chatId, "❌ *Usage:* \`/upkey <HWID> <ExtraDays>d\`");
+            return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/upkey <HWID> <ExtraDays>d`");
         }
 
         const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Updating expiration date...*");
@@ -186,7 +185,7 @@ export async function handleUpdate(update, env, request) {
             await db.prepare("UPDATE licenses SET expire_date = ? WHERE hwid = ?").bind(newExpire, hwid).run();
 
             const newExpireStr = new Date(newExpire).toISOString().split('T')[0];
-            const reply = `🚀 *License Extended!*\n\n` +
+            const reply = "🚀 *License Extended!*\n\n" +
                 `📱 *HWID:* \`${hwid}\`\n` +
                 `📅 *New Expire Date:* \`${newExpireStr}\` (+${extraDays} days)`;
 

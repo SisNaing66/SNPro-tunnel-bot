@@ -3,7 +3,7 @@
 // Channel: https://t.me/premium_channel_404
 ///////////////////////////////////////////////
 
-import { TELEGRAM_BOT_TOKEN_ENV, D1_BINDING_NAME } from './config.js';
+import { TELEGRAM_BOT_TOKEN_ENV, D1_BINDING_NAME, ADMIN_IDS } from './config.js';
 
 function generateRandomKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -37,7 +37,13 @@ export async function handleUpdate(update, env, request) {
     const text = message.text.trim();
     const parts = text.split(/\s+/);
     const command = parts[0];
-  
+    
+    if (command.startsWith("/")) {
+        if (!ADMIN_IDS.includes(chatId)) {
+            return await sendTelegramMsg(token, chatId, "🚫 *Access Denied!* You are not authorized to use this bot commands.");
+        }
+    }
+    
     if (command === "/genkey") {
         if (parts.length < 3) {
             return await sendTelegramMsg(token, chatId, "❌ Usage: `/genkey <HWID> <Days>d`\nExample: `/genkey 1234567890abcdef 30d`");
@@ -61,7 +67,7 @@ export async function handleUpdate(update, env, request) {
         const reply = `✅ *New Key Generated & Bound!*\n\n📱 *HWID:* \`${hwid}\`\n🔑 *Serial Key:* \`${serialKey}\`\n📅 *Expire Date:* \`${expireDateStr}\` (${days} days)`;
         return await sendTelegramMsg(token, chatId, reply);
     }
-  
+    
     if (command === "/delkey") {
         if (parts.length < 2) {
             return await sendTelegramMsg(token, chatId, "❌ Usage: `/delkey <HWID>`");
@@ -71,7 +77,7 @@ export async function handleUpdate(update, env, request) {
         await db.prepare("DELETE FROM licenses WHERE hwid = ?").bind(hwid).run();
         return await sendTelegramMsg(token, chatId, `🗑️ License for HWID \`${hwid}\` deleted successfully!`);
     }
-  
+    
     if (command === "/upkey") {
         if (parts.length < 3) {
             return await sendTelegramMsg(token, chatId, "❌ Usage: `/upkey <HWID> <ExtraDays>d`");

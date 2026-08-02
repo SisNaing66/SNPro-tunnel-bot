@@ -5,7 +5,6 @@
 
 import { TELEGRAM_BOT_TOKEN_ENV, D1_BINDING_NAME, ADMIN_IDS } from './config.js';
 
-// Random Serial Key Auto-Generate ပြုလုပ်ပေးမည့် Helper (Format: WARP-XXXX-XXXX-XXXX)
 function generateRandomKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "WARP";
@@ -18,7 +17,6 @@ function generateRandomKey() {
     return result;
 }
 
-// Telegram Message အသစ် ပို့ပေးမည့် Helper
 async function sendTelegramMsg(token, chatId, text) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const res = await fetch(url, {
@@ -29,7 +27,6 @@ async function sendTelegramMsg(token, chatId, text) {
     return await res.json();
 }
 
-// Telegram Message ကို ပြန်လည် Edit / Update လုပ်ပေးမည့် Helper
 async function editTelegramMsg(token, chatId, messageId, text) {
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     await fetch(url, {
@@ -44,9 +41,6 @@ async function editTelegramMsg(token, chatId, messageId, text) {
     });
 }
 
-/**
- * Telegram Updates ကို လက်ခံ၍ Commands များကို ကိုင်တွယ်ခြင်း
- */
 export async function handleUpdate(update, env, request) {
     const token = env[TELEGRAM_BOT_TOKEN_ENV];
     const db = env[D1_BINDING_NAME];
@@ -58,8 +52,7 @@ export async function handleUpdate(update, env, request) {
     const text = message.text.trim();
     const parts = text.split(/\s+/);
     const command = parts[0];
-
-    // 💡 1. /start Command (Welcome Message)
+    
     if (command === "/start") {
         const welcomeText = "👋 *Welcome to WARP Tunnel License Bot!*\n\n" +
             "This bot manages hardware-bound license keys for WARP Tunnel Android App.\n\n" +
@@ -67,26 +60,22 @@ export async function handleUpdate(update, env, request) {
             "• `/genkey <HWID> <Days>d` - Generate & bind new key\n" +
             "• `/upkey <HWID> <Days>d` - Extend existing license\n" +
             "• `/delkey <HWID>` - Delete license key\n\n" +
-            "📢 *Channel:* [WARP Tunnel Updates](https://t.me/premium_channel_404)\n" +
             `👤 *Your Telegram ID:* \`${chatId}\``;
 
         return await sendTelegramMsg(token, chatId, welcomeText);
     }
-
-    // 💡 2. ADMIN CHECK: Admin မဟုတ်ပါက တားဆီးခြင်း
+    
     if (command.startsWith("/")) {
         if (!ADMIN_IDS.includes(chatId)) {
             return await sendTelegramMsg(token, chatId, "🚫 *Access Denied!* You are not authorized to use this bot.");
         }
     }
-
-    // 💡 3. /genkey <HWID> <Days>
+    
     if (command === "/genkey") {
         if (parts.length < 3) {
             return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/genkey <HWID> <Days>d`\n*Example:* `/genkey 3c94e111df90d2cb 30d`");
         }
-
-        // ⏳ Loading Message ပို့ခြင်း
+        
         const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Generating Serial Key & Binding Database... Please wait.*");
         const msgId = loadingRes.result?.message_id;
 
@@ -127,8 +116,7 @@ export async function handleUpdate(update, env, request) {
         }
         return;
     }
-
-    // 💡 4. /delkey <HWID>
+    
     if (command === "/delkey") {
         if (parts.length < 2) {
             return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/delkey <HWID>`");
@@ -151,8 +139,7 @@ export async function handleUpdate(update, env, request) {
         }
         return;
     }
-
-    // 💡 5. /upkey <HWID> <ExtraDays>
+    
     if (command === "/upkey") {
         if (parts.length < 3) {
             return await sendTelegramMsg(token, chatId, "❌ *Usage:* `/upkey <HWID> <ExtraDays>d`");
@@ -200,9 +187,6 @@ export async function handleUpdate(update, env, request) {
     }
 }
 
-/**
- * Android App မှ /api/check-license ဖြင့် လာရောက်စစ်ဆေးသည့် Request
- */
 export async function handleLicenseCheck(request, env) {
     const db = env[D1_BINDING_NAME];
     try {

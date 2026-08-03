@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////
-// Copyright (C) t.me/nkka404
-// Channel: https://t.me/premium_channel_404
+// Copyright (C) t.me/Result69
+// Channel: https://t.me/noresult6999
 ///////////////////////////////////////////////
 
 import { handleUpdate, handleLicenseCheck } from './bot.js';
@@ -51,7 +51,7 @@ const htmlTemplate = `
                     <i class="fa-solid fa-bolt text-amber-400 text-lg"></i>
                     <span class="text-sm font-medium text-slate-300">Engine Version</span>
                 </div>
-                <span class="text-sm font-semibold text-slate-400">404 \\ 2.0 🇲🇲</span>
+                <span class="text-sm font-semibold text-slate-400">💥Sis Naing💥</span>
             </div>
         </div>
 
@@ -60,14 +60,14 @@ const htmlTemplate = `
                 <i class="fa-solid fa-link text-cyan-400 mb-2 group-hover:scale-110 transition-transform"></i>
                 <span class="text-xs font-semibold text-slate-300">Set Webhook</span>
             </a>
-            <a href="https://t.me/premium_channel_404" target="_blank" class="flex flex-col items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-700/70 border border-slate-700/50 hover:border-blue-500/50 rounded-2xl transition-all duration-300 group">
+            <a href="https://t.me/noresult6999" target="_blank" class="flex flex-col items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-700/70 border border-slate-700/50 hover:border-blue-500/50 rounded-2xl transition-all duration-300 group">
                 <i class="fa-brands fa-telegram text-blue-400 mb-2 group-hover:scale-110 transition-transform"></i>
                 <span class="text-xs font-semibold text-slate-300">Telegram Channel</span>
             </a>
         </div>
 
         <div class="text-center text-xs text-slate-500">
-            &copy; 2026 Developed by <a href="https://t.me/nkka404" target="_blank" class="text-cyan-400/80 hover:underline">@nkka404</a>. All rights reserved.
+            &copy; 2026 Developed by <a href="https://t.me/Result69" target="_blank" class="text-cyan-400/80 hover:underline">@nkka404</a>. All rights reserved.
         </div>
 
     </div>

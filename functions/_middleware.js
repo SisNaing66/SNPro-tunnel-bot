@@ -67,7 +67,7 @@ const htmlTemplate = `
         </div>
 
         <div class="text-center text-xs text-slate-500">
-            &copy; 2026 Developed by <a href="https://t.me/Result69" target="_blank" class="text-cyan-400/80 hover:underline">@nkka404</a>. All rights reserved.
+            &copy; 2026 Developed by <a href="https://t.me/Result69" target="_blank" class="text-cyan-400/80 hover:underline">@SisNaing6</a>. All rights reserved.
         </div>
 
     </div>

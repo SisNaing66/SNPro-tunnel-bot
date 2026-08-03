@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////
-// Copyright (C) t.me/nkka404
-// Channel: https://t.me/premium_channel_404
+// Copyright (C) t.me/Result69
+// Channel: https://t.me/noresult6999
 ///////////////////////////////////////////////
 
 import { TELEGRAM_BOT_TOKEN_ENV, D1_BINDING_NAME, ADMIN_IDS } from './config.js';
 
 function generateRandomKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let result = "WARP";
+    let result = "SN";
     for (let i = 0; i < 3; i++) {
         result += "-";
         for (let j = 0; j < 4; j++) {
@@ -54,8 +54,8 @@ export async function handleUpdate(update, env, request) {
     const command = parts[0];
     
     if (command === "/start") {
-        const welcomeText = "👋 *Welcome to WARP Tunnel License Bot!*\n\n" +
-            "This bot manages hardware-bound license keys for WARP Tunnel Android App.\n\n" +
+        const welcomeText = "👋 *Welcome to SN Tulip Vpn License Bot!*\n\n" +
+            "This bot manages hardware-bound license keys for SN Tulip Vpn Android App.\n\n" +
             "⚡ *Available Admin Commands:*\n" +
             "• `/genkey <HWID> <Days>d` - Generate & bind new key\n" +
             "• `/upkey <HWID> <Days>d` - Extend existing license\n" +

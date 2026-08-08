@@ -59,7 +59,8 @@ export async function handleUpdate(update, env, request) {
             "⚡ *Available Admin Commands:*\n" +
             "• `/genkey <HWID> <Days>d` - Generate & bind new key\n" +
             "• `/upkey <HWID> <Days>d` - Extend existing license\n" +
-            "• `/delkey <HWID>` - Delete license key\n\n" +
+            "• `/delkey <HWID>` - Delete license key\n" +
+            "• `/list` - View all licenses & stats\n\n" +
             `👤 *Your Telegram ID:* \`${chatId}\``;
 
         return await sendTelegramMsg(token, chatId, welcomeText);
@@ -185,6 +186,64 @@ export async function handleUpdate(update, env, request) {
         }
         return;
     }
+
+    if (command === "/list") {
+        const loadingRes = await sendTelegramMsg(token, chatId, "⏳ *Fetching license data...*");
+        const msgId = loadingRes.result?.message_id;
+
+        try {
+            const { results } = await db.prepare("SELECT * FROM licenses ORDER BY expire_date ASC").all();
+            
+            if (!results || results.length === 0) {
+                const emptyText = "📭 *Database is empty!* No licenses found.";
+                if (msgId) return await editTelegramMsg(token, chatId, msgId, emptyText);
+                return await sendTelegramMsg(token, chatId, emptyText);
+            }
+
+            const currentTime = Date.now();
+            let activeCount = 0;
+            let expiredCount = 0;
+            let listText = "";
+
+            results.forEach((row, index) => {
+                const isExpired = currentTime > row.expire_date;
+                if (isExpired) {
+                    expiredCount++;
+                } else {
+                    activeCount++;
+                }
+                
+                const expireDateStr = new Date(row.expire_date).toISOString().split('T')[0];
+                const statusEmoji = isExpired ? "🔴" : "🟢";
+                
+                if (index < 30) {
+                    listText += `${statusEmoji} \`${row.hwid}\` | Exp: ${expireDateStr}\n`;
+                }
+            });
+
+            let reply = `📊 *License Database Stats*\n\n` +
+                        `🔹 *Total Licenses:* ${results.length}\n` +
+                        `🟢 *Active:* ${activeCount}\n` +
+                        `🔴 *Expired:* ${expiredCount}\n\n` +
+                        `📝 *License List (Top 30):*\n${listText}`;
+            
+            if (results.length > 30) {
+                reply += `\n... *and ${results.length - 30} more.*`;
+            }
+
+            if (msgId) {
+                await editTelegramMsg(token, chatId, msgId, reply);
+            } else {
+                await sendTelegramMsg(token, chatId, reply);
+            }
+
+        } catch (e) {
+            const failText = `❌ *Database Error:* ${e.message}`;
+            if (msgId) await editTelegramMsg(token, chatId, msgId, failText);
+            else await sendTelegramMsg(token, chatId, failText);
+        }
+        return;
+    }
 }
 
 export async function handleLicenseCheck(request, env) {
@@ -235,3 +294,4 @@ export async function handleLicenseCheck(request, env) {
         });
     }
 }
+

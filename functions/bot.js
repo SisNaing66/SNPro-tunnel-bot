@@ -329,9 +329,10 @@ export async function handleLicenseCheck(request, env) {
         const currentTime = Date.now();
         const row = await db.prepare("SELECT * FROM licenses WHERE hwid = ?").bind(hwid).first();
 
-        if (!row) return new Response(JSON.stringify({ success: false, message: "No active license found for this device." }), { headers: { 'Content-Type': 'application/json' } });
-        if (row.is_active !== 1) return new Response(JSON.stringify({ success: false, message: "License is disabled by Admin!" }), { headers: { 'Content-Type': 'application/json' } });
-        if (serial_key && row.serial_key !== serial_key) return new Response(JSON.stringify({ success: false, message: "Invalid Serial Key provided!" }), { headers: { 'Content-Type': 'application/json' } });
+        // 🔥 ဒီနေရာမှာ is_expired: true ကို သေချာ ထည့်ပေးထားပါတယ် 🔥
+        if (!row) return new Response(JSON.stringify({ success: false, message: "No active license found for this device.", is_expired: true }), { headers: { 'Content-Type': 'application/json' } });
+        if (row.is_active !== 1) return new Response(JSON.stringify({ success: false, message: "License is disabled by Admin!", is_expired: true }), { headers: { 'Content-Type': 'application/json' } });
+        if (serial_key && row.serial_key !== serial_key) return new Response(JSON.stringify({ success: false, message: "Invalid Serial Key provided!", is_expired: true }), { headers: { 'Content-Type': 'application/json' } });
         if (currentTime > row.expire_date) return new Response(JSON.stringify({ success: false, message: "License has expired!", is_expired: true }), { headers: { 'Content-Type': 'application/json' } });
 
         return new Response(JSON.stringify({
